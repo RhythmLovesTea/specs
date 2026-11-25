@@ -1,0 +1,165 @@
+# config/policies.yaml -- declarative security policy (default-deny)
+# Precedence: explicit DENY > ESCALATE > explicit ALLOW > default DENY.
+# Argument predicates are regular expressions that must match the WHOLE value.
+version: "1.0"
+default_effect: DENY
+
+taint_sources:
+  - {tool: fetch_webpage,     adds_taint: UNTRUSTED_EXTERNAL}
+  - {tool: read_email_inbox,  adds_taint: UNTRUSTED_EXTERNAL}
+  - {tool: query_internal_db, adds_taint: CONFIDENTIAL_INTERNAL}
+  - {tool: read_file,         adds_taint: CONFIDENTIAL_INTERNAL}
+
+rules:
+  # ----------------------------------------------------------------- global hard denies
+  - rule_id: DENY_SHELL_ALL
+    role: "*"
+    tool_pattern: "shell_exec"
+    effect: DENY
+    priority: 1000
+
+  - rule_id: DENY_DB_DROP_ALL
+    role: "*"
+    tool_pattern: "db_drop_*"
+    effect: DENY
+    priority: 1000
+
+  # ----------------------------------------------------------------- Orchestrator
+  - {rule_id: ALLOW_ORCH_PLAN, role: Orchestrator, tool_pattern: create_plan, effect: ALLOW, priority: 10}
+  - {rule_id: ALLOW_ORCH_STATUS, role: Orchestrator, tool_pattern: get_task_status, effect: ALLOW, priority: 10}
+  - rule_id: ALLOW_ORCH_DELEGATE
+    role: Orchestrator
+    tool_pattern: a2a.delegate
+    effect: ALLOW
+    priority: 10
+    conditions:
+      argument_matches:
+        target_role: "(Researcher|Coder|Communicator)"
+
+  # ----------------------------------------------------------------- Researcher
+  - rule_id: ALLOW_RES_FETCH
+    role: Researcher
+    tool_pattern: fetch_webpage
+    effect: ALLOW
+    priority: 10
+    conditions:
+      argument_matches:
+        url: 'https://[A-Za-z0-9.-]+(/\S*)?'
+
+  - {rule_id: ALLOW_RES_SEARCH, role: Researcher, tool_pattern: web_search, effect: ALLOW, priority: 10}
+  - {rule_id: ALLOW_RES_SUMMARIZE, role: Researcher, tool_pattern: summarize_text, effect: ALLOW, priority: 10}
+
+  - rule_id: ALLOW_RES_READ_PUBLIC
+    role: Researcher
+    tool_pattern: read_public_doc
+    effect: ALLOW
+    priority: 10
+    conditions:
+      argument_matches:
+        path: '/workspace/public/(?!.*\.\.).*'
+
+  - rule_id: ALLOW_RES_DELEGATE
+    role: Researcher
+    tool_pattern: a2a.delegate
+    effect: ALLOW
+    priority: 10
+    conditions:
+      argument_matches:
+        target_role: "(Orchestrator|Communicator)"
+
+  - {rule_id: DENY_RES_EMAIL, role: Researcher, tool_pattern: send_email, effect: DENY, priority: 500}
+
+  # ----------------------------------------------------------------- Coder
+  - rule_id: ALLOW_CODER_READ
+    role: Coder
+    tool_pattern: read_file
+    effect: ALLOW
+    priority: 10
+    conditions:
+      argument_matches:
+        path: '/workspace/(?!.*\.\.).*'
+
+  - rule_id: ALLOW_CODER_WRITE
+    role: Coder
+    tool_pattern: write_file
+    effect: ALLOW
+    priority: 10
+    conditions:
+      argument_matches:
+        path: '/workspace/sandbox/(?!.*\.\.).*'
+
+  - {rule_id: ALLOW_CODER_SANDBOX, role: Coder, tool_pattern: run_sandboxed_code, effect: ALLOW, priority: 10}
+  - {rule_id: ALLOW_CODER_DB_QUERY, role: Coder, tool_pattern: query_internal_db, effect: ALLOW, priority: 10}
+
+  - rule_id: ALLOW_CODER_HTTP_POST
+    role: Coder
+    tool_pattern: http_post
+    effect: ALLOW
+    priority: 10
+    conditions:
+      argument_matches:
+        url: 'https://[A-Za-z0-9.-]+(/\S*)?'
+
+  - rule_id: ALLOW_CODER_DELEGATE
+    role: Coder
+    tool_pattern: a2a.delegate
+    effect: ALLOW
+    priority: 10
+    conditions:
+      argument_matches:
+        target_role: "Orchestrator"
+
+  - rule_id: DENY_CODER_CONF_EXFIL
+    role: Coder
+    tool_pattern: http_post
+    effect: DENY
+    priority: 100
+    conditions:
+      taint_present_any: [CONFIDENTIAL_INTERNAL]
+      argument_not_matches:
+        url: 'https://api\.company\.com(/\S*)?'
+
+  - {rule_id: ESCALATE_CODER_DB_DELETE, role: Coder, tool_pattern: "db_delete_*", effect: ESCALATE, priority: 90}
+
+  # ----------------------------------------------------------------- Communicator
+  - rule_id: ALLOW_COM_EMAIL
+    role: Communicator
+    tool_pattern: send_email
+    effect: ALLOW
+    priority: 10
+    conditions:
+      argument_matches:
+        to: '[^@\s,;]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
+
+  - rule_id: DENY_TAINTED_EXTERNAL_EMAIL
+    role: Communicator
+    tool_pattern: send_email
+    effect: DENY
+    priority: 100
+    conditions:
+      taint_present_any: [UNTRUSTED_EXTERNAL]
+      argument_not_matches:
+        to: '[^@\s,;]+@company\.com'
+
+  - rule_id: ESCALATE_CONF_EXTERNAL_EMAIL
+    role: Communicator
+    tool_pattern: send_email
+    effect: ESCALATE
+    priority: 80
+    conditions:
+      taint_present_any: [CONFIDENTIAL_INTERNAL]
+      argument_not_matches:
+        to: '[^@\s,;]+@company\.com'
+
+  - rule_id: ALLOW_COM_SLACK
+    role: Communicator
+    tool_pattern: send_slack_message
+    effect: ALLOW
+    priority: 10
+    conditions:
+      argument_matches:
+        channel: '#(general|team-[A-Za-z0-9_-]+)'
+
+  - {rule_id: ALLOW_COM_INBOX, role: Communicator, tool_pattern: read_email_inbox, effect: ALLOW, priority: 10}
+  - {rule_id: ALLOW_COM_SUMMARIZE, role: Communicator, tool_pattern: summarize_text, effect: ALLOW, priority: 10}
+  - {rule_id: ALLOW_COM_CALENDAR, role: Communicator, tool_pattern: get_calendar_notes, effect: ALLOW, priority: 10}

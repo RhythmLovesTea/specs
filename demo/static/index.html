@@ -1,0 +1,3158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Gateway That Says No — Multi-Agent Runtime Security</title>
+  <style>
+    /* =========================================================================
+       FRAMER DESIGN SYSTEM TOKENS (strict adherence to DESIGN-framer.md)
+       ========================================================================= */
+    :root {
+      /* Surfaces & Ink */
+      --primary: #ffffff;
+      --on-primary: #000000;
+      --accent-blue: #0099ff;
+      --ink: #ffffff;
+      --ink-muted: #999999;
+      --canvas: #090909;
+      --surface-1: #141414;
+      --surface-2: #1c1c1c;
+      --hairline: #262626;
+      --hairline-soft: #1a1a1a;
+      --inverse-canvas: #ffffff;
+      --inverse-ink: #000000;
+
+      /* Framer Signature Gradients (cards only, never full sections) */
+      --gradient-magenta: #d44df0;
+      --gradient-violet: #6a4cf5;
+      --gradient-orange: #ff7a3d;
+      --gradient-coral: #ff5577;
+
+      /* Semantic Status Signals (glyphs, badges, chips — never full UI chrome) */
+      --semantic-success: #22c55e;
+      --semantic-danger: #ef4444;
+      --semantic-warning: #f59e0b;
+      --taint-external: #fb923c;
+      --taint-confidential: #e11d48;
+
+      /* Radii */
+      --r-xs: 4px;
+      --r-sm: 6px;
+      --r-md: 10px;
+      --r-lg: 15px;
+      --r-xl: 20px;
+      --r-xxl: 30px;
+      --r-pill: 100px;
+      --r-full: 9999px;
+
+      /* Spacing (5px Framer base unit) */
+      --sp-xxs: 4px;
+      --sp-xs: 8px;
+      --sp-sm: 12px;
+      --sp-md: 15px;
+      --sp-lg: 20px;
+      --sp-xl: 30px;
+      --sp-xxl: 40px;
+
+      /* Typography */
+      --font-display: "GT Walsheim Framer Medium", "GT Walsheim Medium", "Mona Sans", "Geist", "Inter Variable", "Inter", "Adwaita Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      --font-body: "Inter Variable", "Inter", "Adwaita Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      --font-mono: "JetBrainsMono Nerd Font", "JetBrains Mono", "Adwaita Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+      /* Elevation */
+      --elev-light-edge: inset 0 0.5px 0 rgba(255, 255, 255, 0.10), 0 10px 30px rgba(0, 0, 0, 0.35);
+      --elev-focus-blue: 0 0 0 1px rgba(0, 153, 255, 0.55), 0 0 0 4px rgba(0, 153, 255, 0.15);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--canvas);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      font-weight: 400;
+      line-height: 1.30;
+      letter-spacing: -0.15px;
+      font-feature-settings: "cv01" 1, "cv05" 1, "cv09" 1, "cv11" 1, "ss03" 1, "ss07" 1, "dlig" 1;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    .tabular {
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1, "cv01" 1, "cv05" 1, "cv09" 1, "cv11" 1;
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+      font-feature-settings: normal;
+      letter-spacing: -0.02em;
+    }
+
+    a {
+      color: var(--accent-blue);
+      text-decoration: none;
+    }
+
+    /* =========================================================================
+       FRAMER PILL BUTTONS & FOCUS RINGS
+       ========================================================================= */
+    button {
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.0;
+      letter-spacing: -0.14px;
+      font-feature-settings: "cv11" 1;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: none;
+      box-shadow: var(--elev-focus-blue);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: var(--on-primary);
+      border-radius: var(--r-pill);
+      padding: 10px 18px;
+      min-height: 44px;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      opacity: 0.92;
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+
+    .btn-secondary {
+      background: var(--surface-1);
+      color: var(--ink);
+      border-radius: var(--r-pill);
+      padding: 10px 16px;
+      min-height: 40px;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--surface-2);
+    }
+
+    .btn-secondary:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+
+    .btn-secondary.is-active {
+      background: var(--surface-2);
+      box-shadow: var(--elev-focus-blue);
+    }
+
+    .btn-translucent {
+      background: var(--surface-2);
+      color: var(--ink);
+      border-radius: var(--r-xxl);
+      padding: 8px 14px;
+      min-height: 36px;
+    }
+
+    .btn-translucent:hover:not(:disabled) {
+      background: #252525;
+    }
+
+    .btn-icon {
+      background: var(--surface-1);
+      color: var(--ink);
+      border-radius: var(--r-full);
+      width: 38px;
+      height: 38px;
+      padding: 0;
+    }
+
+    .btn-icon:hover:not(:disabled) {
+      background: var(--surface-2);
+    }
+
+    button:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    /* =========================================================================
+       APP SHELL: 16:9 PROJECTOR LAYOUT (1280x720+)
+       ========================================================================= */
+    .app-shell {
+      display: grid;
+      grid-template-rows: 56px 1fr auto;
+      height: 100vh;
+      width: 100%;
+      max-width: 100vw;
+      min-height: 680px;
+      background: var(--canvas);
+      overflow-x: hidden;
+    }
+
+    /* TOP NAV (Framer top-nav: 56px, canvas background, 1px hairline bottom) */
+    .top-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-sm);
+      padding: 0 var(--sp-md);
+      height: 56px;
+      min-width: 0;
+      background: var(--canvas);
+      border-bottom: 1px solid var(--hairline-soft);
+      z-index: 30;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 24px;
+      height: 24px;
+      border-radius: var(--r-sm);
+      background: var(--primary);
+      color: var(--on-primary);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 500;
+      letter-spacing: -0.4px;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .disclaimer-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 9px;
+      border-radius: var(--r-pill);
+      background: var(--surface-1);
+      border: 1px solid var(--hairline);
+      color: var(--ink-muted);
+      font-size: 11.5px;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      text-transform: none;
+      white-space: nowrap;
+    }
+
+    .disclaimer-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: var(--r-full);
+      background: var(--semantic-warning);
+      flex-shrink: 0;
+    }
+
+    /* Chapter Progress Dots */
+    .chapter-dots {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--surface-1);
+      padding: 4px;
+      border-radius: var(--r-pill);
+      border: 1px solid var(--hairline-soft);
+    }
+
+    .ch-dot {
+      min-width: 30px;
+      height: 28px;
+      padding: 0 9px;
+      border-radius: var(--r-pill);
+      background: transparent;
+      color: var(--ink-muted);
+      font-size: 13px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .ch-dot:hover {
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .ch-dot.is-active {
+      background: var(--surface-2);
+      color: var(--ink);
+      box-shadow: 0 0 0 1px rgba(0, 153, 255, 0.75);
+    }
+
+    .ch-dot.is-done::after {
+      content: "";
+      width: 4px;
+      height: 4px;
+      border-radius: var(--r-full);
+      background: var(--semantic-success);
+      margin-left: 3px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .top-actions .btn-secondary {
+      min-height: 34px;
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+
+    /* =========================================================================
+       THREE-COLUMN WORKBENCH
+       ========================================================================= */
+    .workbench {
+      display: grid;
+      grid-template-columns: 274px minmax(0, 1fr) 294px;
+      gap: 12px;
+      padding: 12px 14px;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    @media (min-width: 1440px) {
+      .workbench {
+        grid-template-columns: 292px minmax(0, 1fr) 320px;
+        gap: var(--sp-md);
+        padding: var(--sp-md) var(--sp-lg);
+      }
+    }
+
+    .panel {
+      background: var(--surface-1);
+      border-radius: var(--r-xl);
+      box-shadow: var(--elev-light-edge);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--sp-md) var(--sp-lg) var(--sp-sm);
+      border-bottom: 1px solid var(--hairline-soft);
+      flex-shrink: 0;
+    }
+
+    .panel-eyebrow {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+    }
+
+    .panel-body {
+      padding: var(--sp-md);
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Subtle dark scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: var(--r-full); }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+
+    /* =========================================================================
+       LEFT PANEL: AGENT MAP & TAINT ANIMATION
+       ========================================================================= */
+    .agent-map-stage {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .session-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-radius: var(--r-md);
+      background: var(--canvas);
+      border: 1px solid var(--hairline-soft);
+      font-size: 12px;
+      color: var(--ink-muted);
+    }
+
+    .map-canvas {
+      position: relative;
+      height: 342px;
+      background: var(--canvas);
+      border: 1px solid var(--hairline-soft);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .map-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .edge-base {
+      stroke: var(--hairline);
+      stroke-width: 1.5;
+      fill: none;
+    }
+
+    .edge-active {
+      stroke: var(--accent-blue);
+      stroke-width: 2.2;
+      stroke-dasharray: 6 5;
+      fill: none;
+      animation: dashFlow 0.7s linear infinite;
+    }
+
+    @keyframes dashFlow {
+      to { stroke-dashoffset: -22; }
+    }
+
+    .agent-node {
+      position: absolute;
+      width: 114px;
+      padding: 8px 9px;
+      border-radius: var(--r-md);
+      background: var(--surface-1);
+      border: 1px solid var(--hairline);
+      box-shadow: var(--elev-light-edge);
+      transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease, background-color 220ms ease;
+      z-index: 2;
+    }
+
+    .agent-node.is-active {
+      background: var(--surface-2);
+      border-color: var(--accent-blue);
+      box-shadow: var(--elev-focus-blue);
+    }
+
+    .agent-node.is-tainted-ext {
+      border-color: rgba(251, 146, 60, 0.7);
+    }
+
+    .agent-node.is-tainted-conf {
+      border-color: rgba(225, 29, 72, 0.75);
+    }
+
+    .node-orch { left: 50%; top: 10px; transform: translateX(-50%); width: 144px; }
+    .node-res  { left: 6px; top: 122px; width: calc(50% - 10px); padding: 7px 6px; }
+    .node-cod  { right: 6px; top: 122px; width: calc(50% - 10px); padding: 7px 6px; }
+    .node-com  { left: 50%; bottom: 10px; transform: translateX(-50%); width: 148px; }
+
+    .node-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      margin-bottom: 2px;
+    }
+
+    .node-name {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: -0.25px;
+    }
+
+    .node-priv {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-muted);
+    }
+
+    .node-tag {
+      font-size: 11px;
+      color: var(--ink-muted);
+      margin-bottom: 5px;
+    }
+
+    .taint-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      min-height: 18px;
+    }
+
+    .taint-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: var(--r-xs);
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      animation: taintPulse 480ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .map-canvas .taint-chip {
+      font-size: 8px;
+      padding: 2px 4px;
+      letter-spacing: -0.03em;
+    }
+
+    .taint-chip.ext {
+      background: rgba(251, 146, 60, 0.16);
+      color: var(--taint-external);
+      border: 1px solid rgba(251, 146, 60, 0.45);
+    }
+
+    .taint-chip.conf {
+      background: rgba(225, 29, 72, 0.18);
+      color: #fb7185;
+      border: 1px solid rgba(225, 29, 72, 0.5);
+    }
+
+    .taint-clean {
+      font-size: 11px;
+      color: var(--ink-muted);
+      font-family: var(--font-mono);
+    }
+
+    @keyframes taintPulse {
+      0% { transform: scale(0.75); opacity: 0; }
+      60% { transform: scale(1.10); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Flying taint particle during delegation */
+    .flying-taint {
+      position: absolute;
+      padding: 3px 8px;
+      border-radius: var(--r-pill);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      background: var(--taint-external);
+      color: #000000;
+      z-index: 10;
+      pointer-events: none;
+      box-shadow: 0 4px 14px rgba(251, 146, 60, 0.5);
+      transition: left 620ms cubic-bezier(0.22, 1, 0.36, 1), top 620ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease;
+    }
+
+    .map-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px 11px;
+      background: var(--canvas);
+      border: 1px solid var(--hairline-soft);
+      border-radius: var(--r-lg);
+      font-size: 11.5px;
+      color: var(--ink-muted);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .map-legend .taint-chip {
+      font-size: 8.5px;
+      padding: 2px 5px;
+      flex-shrink: 0;
+    }
+
+    /* =========================================================================
+       CENTER STAGE (minimum 16px in stage content!)
+       ========================================================================= */
+    .stage-panel {
+      background: var(--canvas);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .stage-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--sp-md);
+      padding: 4px 4px var(--sp-sm);
+      flex-shrink: 0;
+    }
+
+    .stage-eyebrow {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      margin-bottom: 4px;
+    }
+
+    .stage-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: clamp(28px, 2.8vw, 44px);
+      font-weight: 500;
+      line-height: 1.00;
+      letter-spacing: -0.045em;
+      color: var(--ink);
+    }
+
+    .stage-scroll {
+      flex: 1;
+      min-height: 0;
+      min-width: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-md);
+      font-size: 16px;
+    }
+
+    .stage-scroll > * {
+      flex-shrink: 0;
+      min-width: 0;
+    }
+
+    /* Two-column comparison stage */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--sp-md);
+      align-items: start;
+    }
+
+    .stage-col {
+      background: var(--surface-1);
+      border-radius: var(--r-xl);
+      padding: var(--sp-md);
+      box-shadow: var(--elev-light-edge);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-sm);
+      border: 1px solid var(--hairline-soft);
+      min-width: 0;
+      transition: background-color 200ms ease, border-color 200ms ease;
+    }
+
+    .stage-col.is-emphasized {
+      background: var(--surface-2);
+      border-color: var(--hairline);
+    }
+
+    .stage-col.is-subdued {
+      opacity: 0.72;
+    }
+
+    .col-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: var(--sp-sm);
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .col-title {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: -0.6px;
+      color: var(--ink);
+    }
+
+    .col-sub {
+      font-size: 13px;
+      color: var(--ink-muted);
+    }
+
+    .step-card {
+      background: var(--canvas);
+      border: 1px solid var(--hairline);
+      border-radius: var(--r-lg);
+      padding: var(--sp-md);
+      font-size: 16px;
+      line-height: 1.35;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      animation: slideInCard 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .step-card.is-deny {
+      border-color: rgba(239, 68, 68, 0.45);
+      animation: slideInCard 220ms ease, denyShake 360ms ease 140ms;
+    }
+
+    .step-card.is-allow {
+      border-color: rgba(34, 197, 94, 0.35);
+    }
+
+    .step-card.is-escalate {
+      border-color: rgba(245, 158, 11, 0.45);
+    }
+
+    @keyframes slideInCard {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes denyShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-5px); }
+      45% { transform: translateX(5px); }
+      70% { transform: translateX(-3px); }
+      90% { transform: translateX(2px); }
+    }
+
+    .step-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .step-caption {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--ink);
+      letter-spacing: -0.2px;
+    }
+
+    .step-call {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      color: var(--ink-muted);
+      background: var(--surface-1);
+      padding: 9px 12px;
+      border-radius: var(--r-md);
+      word-break: break-word;
+      border: 1px solid var(--hairline-soft);
+    }
+
+    .step-call strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    /* Status chips */
+    .verdict-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: var(--r-pill);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .verdict-chip.allow, .verdict-chip.executed {
+      background: rgba(34, 197, 94, 0.16);
+      color: var(--semantic-success);
+      border: 1px solid rgba(34, 197, 94, 0.45);
+    }
+
+    .verdict-chip.deny {
+      background: rgba(239, 68, 68, 0.16);
+      color: var(--semantic-danger);
+      border: 1px solid rgba(239, 68, 68, 0.45);
+    }
+
+    .verdict-chip.escalate {
+      background: rgba(245, 158, 11, 0.16);
+      color: var(--semantic-warning);
+      border: 1px solid rgba(245, 158, 11, 0.45);
+    }
+
+    .rule-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--r-sm);
+      background: var(--surface-2);
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      border: 1px solid var(--hairline);
+      cursor: help;
+      width: fit-content;
+    }
+
+    .rule-pill:hover {
+      border-color: var(--accent-blue);
+      box-shadow: var(--elev-focus-blue);
+    }
+
+    .tool-output {
+      font-size: 16px;
+      color: var(--ink-muted);
+      background: var(--surface-1);
+      padding: 10px 12px;
+      border-radius: var(--r-md);
+      border-left: 2px solid var(--hairline);
+      word-break: break-word;
+    }
+
+    .injection-highlight {
+      display: inline;
+      color: var(--ink);
+      background: rgba(239, 68, 68, 0.28);
+      border: 1px solid rgba(239, 68, 68, 0.55);
+      padding: 1px 5px;
+      border-radius: var(--r-xs);
+      font-family: var(--font-mono);
+      font-size: 14px;
+    }
+
+    .side-effect-banner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: var(--r-md);
+      background: rgba(239, 68, 68, 0.14);
+      border: 1px solid rgba(239, 68, 68, 0.55);
+      color: var(--ink);
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    /* FR-10 Agent vs Operator split panels */
+    .split-visibility {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .vis-box {
+      padding: 10px 12px;
+      border-radius: var(--r-md);
+      background: var(--surface-1);
+      border: 1px solid var(--hairline);
+      font-size: 16px;
+    }
+
+    .vis-box.operator {
+      background: var(--surface-2);
+      border-color: var(--hairline);
+    }
+
+    .vis-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--ink-muted);
+      margin-bottom: 4px;
+    }
+
+    .vis-box.operator .vis-label {
+      color: var(--ink);
+    }
+
+    .vis-text {
+      color: var(--ink);
+      font-size: 16px;
+      word-break: break-word;
+    }
+
+    .vis-box.operator .vis-text {
+      font-family: var(--font-mono);
+      font-size: 15px;
+      color: var(--ink);
+    }
+
+    /* Outcome banners */
+    .outcome-banner {
+      margin-top: 4px;
+      padding: 16px 18px;
+      border-radius: var(--r-lg);
+      background: var(--surface-2);
+      border: 1px solid var(--hairline);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      animation: fadeInUp 300ms ease;
+    }
+
+    .outcome-banner.breach {
+      border-color: rgba(239, 68, 68, 0.65);
+      box-shadow: inset 0 0 24px rgba(239, 68, 68, 0.12);
+    }
+
+    .outcome-banner.contained, .outcome-banner.completed {
+      border-color: rgba(34, 197, 94, 0.60);
+      box-shadow: inset 0 0 24px rgba(34, 197, 94, 0.10);
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .outcome-tag {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 500;
+      letter-spacing: -0.7px;
+    }
+
+    .outcome-banner.breach .outcome-tag { color: var(--semantic-danger); }
+    .outcome-banner.contained .outcome-tag,
+    .outcome-banner.completed .outcome-tag { color: var(--semantic-success); }
+
+    .outcome-detail {
+      font-size: 15px;
+      color: var(--ink-muted);
+      margin-top: 2px;
+    }
+
+    /* =========================================================================
+       FRAMER SIGNATURE GRADIENT SPOTLIGHT CARDS (scarce, max 1 per view!)
+       ========================================================================= */
+    .gradient-spotlight-card {
+      border-radius: var(--r-xxl);
+      padding: var(--sp-xl);
+      color: var(--ink);
+      background: radial-gradient(120% 140% at 15% 15%, var(--gradient-magenta) 0%, var(--gradient-violet) 52%, #291c6e 100%);
+      box-shadow: var(--elev-light-edge);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .gradient-spotlight-card.orange {
+      background: radial-gradient(120% 140% at 12% 18%, var(--gradient-orange) 0%, var(--gradient-coral) 55%, #5b1834 100%);
+    }
+
+    .spotlight-kicker {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.82);
+      margin-bottom: 8px;
+    }
+
+    .spotlight-title {
+      font-family: var(--font-display);
+      font-size: clamp(22px, 2.2vw, 30px);
+      font-weight: 500;
+      line-height: 1.13;
+      letter-spacing: -0.9px;
+      color: #ffffff;
+      margin: 0;
+    }
+
+    /* Pause banner in Chapter 4 */
+    .pause-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-md);
+      padding: 14px 18px;
+      border-radius: var(--r-lg);
+      background: var(--surface-2);
+      border: 1px solid var(--accent-blue);
+      box-shadow: var(--elev-focus-blue);
+      font-size: 16px;
+    }
+
+    /* =========================================================================
+       CHAPTER 1 INTRO: AGENT BENTO + TABLE 3.4 PRIVILEGE MATRIX
+       ========================================================================= */
+    .agents-bento {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--sp-sm);
+    }
+
+    .agent-card {
+      background: var(--surface-1);
+      border-radius: var(--r-xl);
+      padding: var(--sp-md);
+      border: 1px solid var(--hairline-soft);
+      box-shadow: var(--elev-light-edge);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .agent-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .agent-card-name {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: -0.5px;
+    }
+
+    .agent-card-pill {
+      padding: 3px 9px;
+      border-radius: var(--r-pill);
+      background: var(--surface-2);
+      color: var(--ink-muted);
+      font-size: 12px;
+      font-family: var(--font-mono);
+    }
+
+    .agent-card-summary {
+      font-size: 15px;
+      color: var(--ink-muted);
+      line-height: 1.35;
+    }
+
+    .matrix-card {
+      background: var(--surface-1);
+      border-radius: var(--r-xl);
+      padding: var(--sp-lg);
+      box-shadow: var(--elev-light-edge);
+    }
+
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 16px;
+      table-layout: fixed;
+      word-break: break-word;
+    }
+
+    .matrix-table th:nth-child(1) { width: 22%; }
+    .matrix-table th:nth-child(2) { width: 32%; }
+    .matrix-table th:nth-child(3) { width: 26%; }
+    .matrix-table th:nth-child(4) { width: 20%; }
+
+    .matrix-table th {
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--ink-muted);
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .matrix-table td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--hairline-soft);
+      vertical-align: top;
+      color: var(--ink-muted);
+      line-height: 1.35;
+    }
+
+    .matrix-table td:first-child {
+      color: var(--ink);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .pillars-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--sp-md);
+      margin-top: 14px;
+    }
+
+    .pillar-item {
+      background: rgba(9, 9, 9, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--r-lg);
+      padding: 14px 16px;
+    }
+
+    .pillar-item h4 {
+      margin: 0 0 6px;
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+    }
+
+    .pillar-item p {
+      margin: 0;
+      font-size: 15px;
+      color: rgba(255, 255, 255, 0.85);
+      line-height: 1.35;
+    }
+
+    /* =========================================================================
+       CHAPTER 8: FORENSIC AUDIT INSPECTOR (STAGE)
+       ========================================================================= */
+    .forensic-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: var(--sp-md) var(--sp-lg);
+      background: var(--surface-1);
+      border-radius: var(--r-xl);
+      box-shadow: var(--elev-light-edge);
+    }
+
+    .forensic-chain {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .forensic-row {
+      position: relative;
+      background: var(--surface-1);
+      border: 1px solid var(--hairline-soft);
+      border-radius: var(--r-lg);
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: 74px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      font-size: 15px;
+    }
+
+    .forensic-row.is-tampered {
+      border-color: var(--semantic-danger);
+      background: rgba(239, 68, 68, 0.10);
+    }
+
+    .forensic-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 3px 0 3px 32px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--ink-muted);
+    }
+
+    .forensic-link-line {
+      width: 2px;
+      height: 18px;
+      background: var(--hairline);
+    }
+
+    .forensic-link.is-broken .forensic-link-line {
+      background: var(--semantic-danger);
+    }
+
+    .forensic-link.is-broken {
+      color: var(--semantic-danger);
+    }
+
+    /* =========================================================================
+       CHAPTER 9: SCOREBOARD, BAR CHART, RESIDUAL RISKS, BENCHMARK
+       ========================================================================= */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--sp-sm);
+    }
+
+    @media (min-width: 1440px) {
+      .kpi-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
+    .kpi-card {
+      background: var(--surface-1);
+      border-radius: var(--r-xl);
+      padding: var(--sp-md);
+      box-shadow: var(--elev-light-edge);
+      border: 1px solid var(--hairline-soft);
+    }
+
+    .kpi-value {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 500;
+      letter-spacing: -0.8px;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+
+    .kpi-value.danger { color: var(--semantic-danger); }
+    .kpi-value.success { color: var(--semantic-success); }
+    .kpi-value.accent { color: var(--taint-external); }
+
+    .kpi-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--ink);
+      margin-bottom: 3px;
+    }
+
+    .kpi-sub {
+      font-size: 13px;
+      color: var(--ink-muted);
+    }
+
+    .score-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sp-md);
+    }
+
+    .score-card {
+      background: var(--surface-1);
+      border-radius: var(--r-xl);
+      padding: var(--sp-lg);
+      box-shadow: var(--elev-light-edge);
+    }
+
+    .score-card h3 {
+      margin: 0 0 12px;
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 500;
+      letter-spacing: -0.6px;
+    }
+
+    .bar-row {
+      margin-bottom: 14px;
+    }
+
+    .bar-head {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14.5px;
+      margin-bottom: 6px;
+    }
+
+    .bar-track {
+      height: 10px;
+      border-radius: var(--r-pill);
+      background: var(--canvas);
+      overflow: hidden;
+      margin-bottom: 4px;
+      border: 1px solid var(--hairline-soft);
+    }
+
+    .bar-fill-base {
+      height: 100%;
+      background: var(--semantic-danger);
+      border-radius: var(--r-pill);
+      transition: width 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .bar-fill-prot {
+      height: 100%;
+      background: var(--semantic-success);
+      border-radius: var(--r-pill);
+      transition: width 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .risk-row {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--hairline-soft);
+      font-size: 15px;
+    }
+
+    .risk-row:last-child { border-bottom: none; }
+
+    .risk-id {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: var(--r-xs);
+      background: var(--surface-2);
+      color: var(--semantic-warning);
+      margin-right: 8px;
+    }
+
+    /* =========================================================================
+       RIGHT RAIL: LIVE AUDIT LOG (NEWEST ON TOP + CHAIN LINKS)
+       ========================================================================= */
+    .audit-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 9px 12px;
+      border-radius: var(--r-md);
+      background: var(--canvas);
+      border: 1px solid var(--hairline);
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .audit-status.intact {
+      border-color: rgba(34, 197, 94, 0.45);
+      color: var(--semantic-success);
+    }
+
+    .audit-status.broken {
+      border-color: rgba(239, 68, 68, 0.65);
+      color: var(--semantic-danger);
+    }
+
+    .audit-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .audit-controls .btn-secondary {
+      min-height: 32px;
+      padding: 6px 11px;
+      font-size: 12.5px;
+    }
+
+    .audit-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      padding-left: 14px;
+    }
+
+    .audit-feed::before {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 12px;
+      bottom: 12px;
+      width: 2px;
+      background: var(--hairline);
+    }
+
+    .audit-feed.is-broken::before {
+      background: linear-gradient(to bottom, var(--hairline), var(--semantic-danger));
+    }
+
+    .audit-row {
+      position: relative;
+      background: var(--canvas);
+      border: 1px solid var(--hairline-soft);
+      border-radius: var(--r-md);
+      padding: 9px 11px;
+      font-size: 12.5px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .audit-row::before {
+      content: "";
+      position: absolute;
+      left: -13px;
+      top: 14px;
+      width: 8px;
+      height: 8px;
+      border-radius: var(--r-full);
+      background: var(--surface-2);
+      border: 2px solid var(--ink-muted);
+    }
+
+    .audit-row.is-allow::before { border-color: var(--semantic-success); }
+    .audit-row.is-deny::before { border-color: var(--semantic-danger); }
+    .audit-row.is-tampered {
+      border-color: var(--semantic-danger);
+      background: rgba(239, 68, 68, 0.12);
+    }
+    .audit-row.is-tampered::before {
+      background: var(--semantic-danger);
+      border-color: var(--semantic-danger);
+    }
+
+    .audit-row-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .audit-hashes {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-muted);
+    }
+
+    /* =========================================================================
+       BOTTOM NARRATOR BAR
+       ========================================================================= */
+    .narrator-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-md);
+      padding: 10px var(--sp-md);
+      min-width: 0;
+      background: var(--canvas);
+      border-top: 1px solid var(--hairline-soft);
+      z-index: 30;
+    }
+
+    .narrator-text {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .narrator-ch-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 3px;
+    }
+
+    .narrator-ch {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+    }
+
+    .narrator-line {
+      font-size: 16px;
+      font-weight: 400;
+      color: var(--ink);
+      line-height: 1.3;
+    }
+
+    .narrator-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* =========================================================================
+       MODALS, DRAWERS, AND TOOLTIPS
+       ========================================================================= */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 60;
+      padding: var(--sp-lg);
+    }
+
+    .modal-backdrop.is-open {
+      display: flex;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 520px;
+      background: var(--surface-1);
+      border-radius: var(--r-xl);
+      padding: var(--sp-xl);
+      box-shadow: var(--elev-light-edge);
+      border: 1px solid var(--hairline);
+      animation: fadeInUp 200ms ease;
+    }
+
+    .modal-card.wide {
+      max-width: 780px;
+    }
+
+    .modal-title {
+      margin: 6px 0 8px;
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 500;
+      letter-spacing: -0.8px;
+    }
+
+    .drawer {
+      position: fixed;
+      top: 56px;
+      right: 0;
+      bottom: 72px;
+      width: 390px;
+      max-width: 92vw;
+      background: var(--surface-1);
+      border-left: 1px solid var(--hairline);
+      box-shadow: -12px 0 36px rgba(0, 0, 0, 0.55);
+      z-index: 50;
+      padding: var(--sp-lg);
+      overflow-y: auto;
+      transform: translateX(104%);
+      transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .drawer.is-open {
+      transform: translateX(0);
+    }
+
+    .rule-tooltip {
+      position: fixed;
+      z-index: 90;
+      max-width: 380px;
+      background: var(--surface-2);
+      color: var(--ink);
+      border: 1px solid var(--hairline);
+      border-radius: var(--r-md);
+      padding: 12px 14px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+      pointer-events: none;
+      display: none;
+    }
+
+    .rule-tooltip pre {
+      margin: 6px 0 0;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--ink);
+      white-space: pre-wrap;
+    }
+
+    /* Form inputs inside Free Play */
+    .form-field {
+      width: 100%;
+      background: var(--surface-2);
+      color: var(--ink);
+      border: 1px solid var(--hairline);
+      border-radius: var(--r-md);
+      padding: 10px 12px;
+      font-family: var(--font-body);
+      font-size: 14px;
+    }
+
+    /* Responsive breakpoints matching DESIGN-framer.md (1199px / 810px) */
+    @media (max-width: 1180px) {
+      .workbench {
+        grid-template-columns: 245px minmax(0, 1fr) 265px;
+      }
+      .agents-bento, .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 900px) {
+      .app-shell { height: auto; min-height: 100vh; }
+      .workbench { grid-template-columns: 1fr; overflow: visible; }
+      .compare-grid, .score-split, .pillars-grid { grid-template-columns: 1fr; }
+      .top-nav { flex-wrap: wrap; height: auto; padding: 10px 14px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- TOP BAR -->
+    <header class="top-nav">
+      <div class="brand-group">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M8 1L2 3.5V8C2 11.8 4.6 14.5 8 15.5C11.4 14.5 14 11.8 14 8V3.5L8 1Z" stroke="#000000" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M5.5 8.2L7.2 9.9L10.8 6.3" stroke="#000000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="brand-title">The Gateway That Says No</span>
+      </div>
+
+      <nav class="chapter-dots" id="chapterDots" aria-label="Chapters"></nav>
+
+      <div class="top-actions">
+        <button class="btn-secondary" id="btnAuto" title="Toggle Auto-Play (1.5s per step)">Auto: Off</button>
+        <button class="btn-secondary" id="btnFreePlay" title="Interactive Q&A Sandbox">Free Play</button>
+        <button class="btn-secondary" id="btnTaintGuide" title="Taint Explainer (T)">Taint (T)</button>
+        <button class="btn-secondary" id="btnNotes" title="Presenter Notes (P)">Notes (P)</button>
+        <button class="btn-secondary" id="btnReset" title="Reset Gateway, Taints & Audit Log">Reset</button>
+      </div>
+    </header>
+
+    <!-- MAIN 3-COLUMN WORKBENCH -->
+    <main class="workbench">
+      <!-- LEFT: AGENT MAP -->
+      <section class="panel" aria-label="Agent Topology & Taint Map">
+        <div class="panel-header">
+          <span class="panel-eyebrow">Agent Map · Protected</span>
+          <span class="mono" style="font-size:12px;color:var(--ink-muted);" id="sessionBadge">sess_ch1</span>
+        </div>
+        <div class="panel-body">
+          <div class="agent-map-stage">
+            <div class="map-canvas" id="mapCanvas">
+              <svg class="map-svg" viewBox="0 0 248 360" preserveAspectRatio="none">
+                <defs>
+                  <marker id="arrowBlue" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+                    <path d="M0,0 L6,3 L0,6 Z" fill="#0099ff" />
+                  </marker>
+                </defs>
+                <!-- Structural base links -->
+                <line class="edge-base" x1="124" y1="78" x2="66" y2="138" />
+                <line class="edge-base" x1="124" y1="78" x2="182" y2="138" />
+                <line class="edge-base" x1="124" y1="78" x2="124" y2="274" />
+                <path class="edge-base" d="M 66 226 Q 66 268 96 286" />
+                <!-- Active animated delegation arrow -->
+                <path id="activeEdgePath" class="edge-active" d="" marker-end="url(#arrowBlue)" style="display:none;" />
+              </svg>
+
+              <!-- 4 Agent Nodes -->
+              <div class="agent-node node-orch" id="node-orch_01">
+                <div class="node-head">
+                  <span class="node-name">Orchestrator</span>
+                  <span class="node-priv">P8</span>
+                </div>
+                <div class="node-tag">coordinator</div>
+                <div class="taint-row" id="taints-orch_01"><span class="taint-clean">clean</span></div>
+              </div>
+
+              <div class="agent-node node-res" id="node-res_01">
+                <div class="node-head">
+                  <span class="node-name">Researcher</span>
+                  <span class="node-priv">P2</span>
+                </div>
+                <div class="node-tag">read-only web</div>
+                <div class="taint-row" id="taints-res_01"><span class="taint-clean">clean</span></div>
+              </div>
+
+              <div class="agent-node node-cod" id="node-cod_01">
+                <div class="node-head">
+                  <span class="node-name">Coder</span>
+                  <span class="node-priv">P5</span>
+                </div>
+                <div class="node-tag">sandbox code</div>
+                <div class="taint-row" id="taints-cod_01"><span class="taint-clean">clean</span></div>
+              </div>
+
+              <div class="agent-node node-com" id="node-com_01">
+                <div class="node-head">
+                  <span class="node-name">Communicator</span>
+                  <span class="node-priv">P6</span>
+                </div>
+                <div class="node-tag">external comms</div>
+                <div class="taint-row" id="taints-com_01"><span class="taint-clean">clean</span></div>
+              </div>
+            </div>
+
+            <div class="map-legend">
+              <div class="legend-item">
+                <span>Web / Inbox</span>
+                <span class="taint-chip ext">UNTRUSTED_EXTERNAL</span>
+              </div>
+              <div class="legend-item">
+                <span>DB / Workspace</span>
+                <span class="taint-chip conf">CONFIDENTIAL_INTERNAL</span>
+              </div>
+              <div style="font-size:12px;color:var(--ink-muted);line-height:1.35;margin-top:2px;">
+                Delegation (<span class="mono" style="color:var(--ink);">a2a.delegate</span>) copies labels forward — never removed.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CENTER: STAGE -->
+      <section class="stage-panel" aria-label="Scenario Stage">
+        <div class="stage-header">
+          <div>
+            <div class="stage-eyebrow" id="stageEyebrow">CHAPTER 01 · ARCHITECTURE</div>
+            <h1 class="stage-title" id="stageTitle">Meet the team</h1>
+          </div>
+          <div id="stageHeaderActions" style="display:flex;gap:8px;align-items:center;"></div>
+        </div>
+        <div class="stage-scroll" id="stageContent"></div>
+      </section>
+
+      <!-- RIGHT: AUDIT LOG -->
+      <aside class="panel" aria-label="Tamper-Evident Audit Log">
+        <div class="panel-header">
+          <span class="panel-eyebrow">Audit Log · Hash Chain</span>
+          <span class="mono tabular" style="font-size:12px;color:var(--ink-muted);" id="auditCountBadge">0 records</span>
+        </div>
+        <div class="panel-body">
+          <div class="audit-status intact" id="auditStatusBar">
+            <span id="auditStatusText">Chain ready · 0 records</span>
+          </div>
+          <div class="audit-controls">
+            <button class="btn-secondary" id="btnVerifyChain">Verify chain</button>
+            <button class="btn-secondary" id="btnTamperRow">Tamper row 2</button>
+            <button class="btn-secondary" id="btnRestoreLog">Restore log</button>
+            <button class="btn-secondary" id="btnExportAudit">Export</button>
+          </div>
+          <div class="audit-feed" id="auditFeed">
+            <div style="color:var(--ink-muted);font-size:13px;padding:12px 0;">No audit records yet. Advance through scenarios to write hash-chained records.</div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- BOTTOM NARRATOR BAR -->
+    <footer class="narrator-bar">
+      <div class="narrator-text">
+        <div class="narrator-ch-row">
+          <div class="narrator-ch" id="narratorChapterLabel">Chapter 1 of 9 · Meet the team</div>
+          <span class="disclaimer-pill" title="Scripted agents, worst-case assumption: the injection already worked">
+            <span class="disclaimer-dot"></span>
+            <span id="disclaimerText">Scripted agents, worst-case assumption: the injection already worked</span>
+          </span>
+        </div>
+        <div class="narrator-line" id="narratorLine">Loading story...</div>
+      </div>
+      <div class="narrator-controls">
+        <span class="mono tabular" id="stepProgressLabel" style="font-size:13px;color:var(--ink-muted);margin-right:6px;">Intro</span>
+        <button class="btn-secondary" id="btnBack" title="Previous step or chapter (←)">← Back</button>
+        <button class="btn-secondary" id="btnReplay" title="Replay current chapter (R)">Replay</button>
+        <button class="btn-primary" id="btnNext" title="Next step or chapter (Space / →)">Next &gt;</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- HUMAN OPERATOR MODAL (Chapter 7 ESCALATE) -->
+  <div class="modal-backdrop" id="humanModal" role="dialog" aria-modal="true" aria-labelledby="humanModalTitle">
+    <div class="modal-card">
+      <span class="verdict-chip escalate">ESCALATE · HUMAN APPROVAL REQUIRED</span>
+      <h2 class="modal-title" id="humanModalTitle">Human Operator Checkpoint</h2>
+      <p style="color:var(--ink-muted);font-size:16px;margin:0 0 14px;" id="humanModalDesc">
+        An agent requested a destructive tool call that policy flagged for human decision.
+      </p>
+      <div class="step-call" id="humanModalCall" style="margin-bottom:14px;"></div>
+      <div style="font-size:13.5px;color:var(--ink-muted);margin-bottom:20px;">
+        Rule triggered: <span class="mono" style="color:var(--ink);" id="humanModalRule">ESCALATE_CODER_DB_DELETE</span>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button class="btn-secondary" id="btnHumanReject" style="padding:10px 20px;min-height:44px;">Reject (Deny)</button>
+        <button class="btn-primary" id="btnHumanApprove" style="padding:10px 22px;">Approve &amp; Execute</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAINT EXPLAINER OVERLAY (T) -->
+  <div class="modal-backdrop" id="taintModal" role="dialog" aria-modal="true" aria-labelledby="taintModalTitle">
+    <div class="modal-card wide">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="panel-eyebrow">Information-Flow Control (T)</span>
+        <button class="btn-icon" id="btnCloseTaintModal" aria-label="Close">✕</button>
+      </div>
+      <h2 class="modal-title" id="taintModalTitle">How Stateful Taint Works</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0;">
+        <div class="vis-box">
+          <div class="vis-label" style="color:var(--taint-external);">UNTRUSTED_EXTERNAL</div>
+          <div class="vis-text" style="font-size:15px;color:var(--ink-muted);">
+            Applied after <span class="mono" style="color:var(--ink);">fetch_webpage</span> or <span class="mono" style="color:var(--ink);">read_email_inbox</span>. Restricts <span class="mono">send_email</span> strictly to <span class="mono">@company.com</span>.
+          </div>
+        </div>
+        <div class="vis-box">
+          <div class="vis-label" style="color:#fb7185;">CONFIDENTIAL_INTERNAL</div>
+          <div class="vis-text" style="font-size:15px;color:var(--ink-muted);">
+            Applied after <span class="mono" style="color:var(--ink);">query_internal_db</span> or <span class="mono" style="color:var(--ink);">read_file</span>. Blocks <span class="mono">http_post</span> outside <span class="mono">api.company.com</span>.
+          </div>
+        </div>
+      </div>
+      <div class="vis-box" style="margin-bottom:14px;">
+        <div class="vis-label">Why No Laundering &amp; Per-Task Scoping</div>
+        <div class="vis-text" style="font-size:15px;color:var(--ink-muted);line-height:1.45;">
+          <strong style="color:var(--ink);">1. Copy-only propagation:</strong> <span class="mono">propagate_taint()</span> copies labels forward across <span class="mono">a2a.delegate</span> and never strips them.<br/>
+          <strong style="color:var(--ink);">2. Single-task sessions:</strong> Coarse session taint caused benign scenario <strong style="color:var(--ink);">N19</strong> to fail in long sessions; <span class="mono">clear_session(sid)</span> at task boundaries fixes it without weakening security.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FREE PLAY Q&A SANDBOX MODAL -->
+  <div class="modal-backdrop" id="freePlayModal" role="dialog" aria-modal="true" aria-labelledby="freePlayTitle">
+    <div class="modal-card wide">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="panel-eyebrow">Live Policy Sandbox · Q&amp;A</span>
+        <button class="btn-icon" id="btnCloseFreePlay" aria-label="Close">✕</button>
+      </div>
+      <h2 class="modal-title" id="freePlayTitle">Test Any Agent + Tool Call</h2>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+        <button class="btn-translucent fp-preset" data-agent="cod_01" data-tool="shell_exec" data-args='{"command":"cat /etc/passwd"}'>Shell exec</button>
+        <button class="btn-translucent fp-preset" data-agent="cod_01" data-tool="write_file" data-args='{"path":"/workspace/sandbox/../secret.txt","content":"x"}'>Path traversal</button>
+        <button class="btn-translucent fp-preset" data-agent="rogue_99" data-tool="query_internal_db" data-args='{"query":"SELECT *"}'>Spoofed agent</button>
+        <button class="btn-translucent fp-preset" data-agent="res_01" data-tool="a2a.delegate" data-args='{"target_agent_id":"cod_01","payload":"run"}'>Res → Coder delegate</button>
+        <button class="btn-translucent fp-preset" data-agent="com_01" data-tool="send_slack_message" data-args='{"channel":"#random","message":"hi"}'>Unapproved Slack</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div>
+          <label class="panel-eyebrow" style="display:block;margin-bottom:4px;">Agent</label>
+          <select id="fpAgent" class="form-field">
+            <option value="orch_01">orch_01 (Orchestrator)</option>
+            <option value="res_01">res_01 (Researcher)</option>
+            <option value="cod_01">cod_01 (Coder)</option>
+            <option value="com_01">com_01 (Communicator)</option>
+            <option value="rogue_99">rogue_99 (Unregistered)</option>
+          </select>
+        </div>
+        <div>
+          <label class="panel-eyebrow" style="display:block;margin-bottom:4px;">Tool</label>
+          <select id="fpTool" class="form-field">
+            <option value="send_email">send_email</option>
+            <option value="fetch_webpage">fetch_webpage</option>
+            <option value="read_email_inbox">read_email_inbox</option>
+            <option value="query_internal_db">query_internal_db</option>
+            <option value="http_post">http_post</option>
+            <option value="write_file">write_file</option>
+            <option value="db_delete_table">db_delete_table</option>
+            <option value="db_drop_table">db_drop_table</option>
+            <option value="shell_exec">shell_exec</option>
+            <option value="send_slack_message">send_slack_message</option>
+            <option value="a2a.delegate">a2a.delegate</option>
+            <option value="get_task_status">get_task_status</option>
+          </select>
+        </div>
+        <div>
+          <label class="panel-eyebrow" style="display:block;margin-bottom:4px;">Human Approval</label>
+          <select id="fpApproval" class="form-field">
+            <option value="false">False (Reject Escalations)</option>
+            <option value="true">True (Approve Escalations)</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label class="panel-eyebrow" style="display:block;margin-bottom:4px;">Arguments (JSON)</label>
+        <textarea id="fpArgs" class="form-field mono" rows="2">{"to": "attacker@evil.com", "subject": "Test"}</textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+        <button class="btn-primary" id="btnRunFreePlay">Execute Side-by-Side</button>
+      </div>
+      <div id="fpResult" class="compare-grid" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- PRESENTER NOTES DRAWER (P) -->
+  <aside class="drawer" id="notesDrawer" aria-label="Presenter Notes">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <span class="panel-eyebrow">Presenter Script · Shortcuts</span>
+      <button class="btn-icon" id="btnCloseNotes" aria-label="Close">✕</button>
+    </div>
+    <h3 id="notesTitle" style="font-family:var(--font-display);font-size:22px;font-weight:500;letter-spacing:-0.6px;margin:0 0 8px;">Chapter 1</h3>
+    <div class="vis-box" style="margin-bottom:12px;">
+      <div class="vis-label">What to say</div>
+      <div class="vis-text" id="notesSay" style="font-size:15px;"></div>
+    </div>
+    <div class="vis-box operator" style="margin-bottom:16px;">
+      <div class="vis-label">Stage cues</div>
+      <div class="vis-text" id="notesCue" style="font-family:var(--font-body);font-size:14.5px;color:var(--ink-muted);"></div>
+    </div>
+    <div class="panel-eyebrow" style="margin-bottom:8px;">Keyboard Shortcuts</div>
+    <div style="font-size:13px;color:var(--ink-muted);line-height:1.6;margin-bottom:16px;">
+      <span class="mono" style="color:var(--ink);">Space / →</span> Next step &nbsp;·&nbsp;
+      <span class="mono" style="color:var(--ink);">←</span> Back &nbsp;·&nbsp;
+      <span class="mono" style="color:var(--ink);">R</span> Replay chapter<br/>
+      <span class="mono" style="color:var(--ink);">P</span> Presenter notes &nbsp;·&nbsp;
+      <span class="mono" style="color:var(--ink);">T</span> Taint overlay
+    </div>
+    <div class="panel-eyebrow" style="margin-bottom:8px;">Q&amp;A Backup Answers</div>
+    <div id="qaList" style="display:flex;flex-direction:column;gap:8px;"></div>
+  </aside>
+
+  <!-- RULE YAML TOOLTIP -->
+  <div class="rule-tooltip" id="ruleTooltip">
+    <div class="mono" style="font-size:12px;color:var(--ink);font-weight:600;" id="ruleTooltipId"></div>
+    <pre id="ruleTooltipYaml"></pre>
+  </div>
+
+  <script>
+    "use strict";
+
+    // =========================================================================
+    // STATE
+    // =========================================================================
+    const state = {
+      story: null,
+      chapterIdx: 0,
+      revealedSteps: 0,
+      completedChapters: new Set(),
+      // Per chapter step results: { [chapterId]: { baseline: [], protected: [] } }
+      runs: {},
+      taints: { orch_01: [], res_01: [], cod_01: [], com_01: [] },
+      auditRecords: [],
+      verifyStatus: { ok: true, bad_line: null, count: 0 },
+      autoPlay: false,
+      autoTimer: null,
+      pauseBeforeExfil: true, // Ch 4 default pause-and-explain toggle
+      isPausedOnCh4: false,
+      busy: false,
+      pendingApprovalStepIdx: null,
+      liveBenchmark: null,
+    };
+
+    const NODE_CENTERS = {
+      orch_01: { x: 124, y: 52 },
+      res_01:  { x: 66,  y: 182 },
+      cod_01:  { x: 182, y: 182 },
+      com_01:  { x: 124, y: 310 },
+    };
+
+    // =========================================================================
+    // HELPERS
+    // =========================================================================
+    function esc(val) {
+      return String(val ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    async function api(url, opts = {}) {
+      const res = await fetch(url, {
+        headers: { "Content-Type": "application/json" },
+        ...opts,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || `HTTP ${res.status}`);
+      }
+      return data;
+    }
+
+    function currentChapter() {
+      return state.story.chapters[state.chapterIdx];
+    }
+
+    function getChapterRun(chId) {
+      if (!state.runs[chId]) {
+        state.runs[chId] = { baseline: [], protected: [] };
+      }
+      return state.runs[chId];
+    }
+
+    function formatArgs(args) {
+      const entries = Object.entries(args || {});
+      if (!entries.length) return "";
+      return entries
+        .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+        .join(", ");
+    }
+
+    function formatResultHtml(text, highlightInjection) {
+      if (!text) return "";
+      const raw = String(text);
+      if (highlightInjection && raw.includes("<!--")) {
+        const idx = raw.indexOf("<!--");
+        const before = esc(raw.slice(0, idx));
+        const comment = esc(raw.slice(idx));
+        return `${before}<span class="injection-highlight">${comment}</span>`;
+      }
+      return esc(raw);
+    }
+
+    // =========================================================================
+    // INIT & DATA SYNC
+    // =========================================================================
+    async function init() {
+      state.story = await api("/api/story");
+      document.getElementById("disclaimerText").textContent =
+        state.story.simulation_disclaimer;
+      renderQaList();
+      await refreshAuditAndVerify();
+      renderAll();
+    }
+
+    async function refreshAuditAndVerify() {
+      const [auditData, verifyData] = await Promise.all([
+        api("/api/audit"),
+        api("/api/verify"),
+      ]);
+      state.auditRecords = auditData.records || [];
+      state.verifyStatus = verifyData;
+      renderAuditRail();
+    }
+
+    async function refreshTaints() {
+      const ch = currentChapter();
+      const data = await api(`/api/taints?session_id=${encodeURIComponent(ch.session_id)}`);
+      state.taints = data.taints;
+      renderAgentMap();
+    }
+
+    // =========================================================================
+    // STEP EXECUTION & NAVIGATION
+    // =========================================================================
+    async function executeNextStep(approvalOverride = null) {
+      if (state.busy) return;
+      const ch = currentChapter();
+      const steps = ch.steps || [];
+
+      // If chapter has finished (or is intro/audit/scoreboard), advance to next chapter
+      if (state.revealedSteps >= steps.length) {
+        if (state.chapterIdx < state.story.chapters.length - 1) {
+          await goToChapter(state.chapterIdx + 1);
+        } else {
+          stopAutoPlay();
+        }
+        return;
+      }
+
+      const nextStep = steps[state.revealedSteps];
+
+      // Ch 4 "Pause and explain" gate before final exfiltration step
+      if (
+        ch.id === "ch4" &&
+        nextStep.pause_before &&
+        state.pauseBeforeExfil &&
+        !state.isPausedOnCh4 &&
+        approvalOverride === null
+      ) {
+        state.isPausedOnCh4 = true;
+        stopAutoPlay();
+        renderStage();
+        renderNarrator();
+        return;
+      }
+      state.isPausedOnCh4 = false;
+
+      // Ch 7 Human-in-the-loop modal
+      if (nextStep.type === "human_approval" && approvalOverride === null) {
+        stopAutoPlay();
+        openHumanModal(state.revealedSteps, nextStep);
+        return;
+      }
+
+      state.busy = true;
+      updateControlState();
+      try {
+        const approval = approvalOverride === null ? false : Boolean(approvalOverride);
+        const [baseRes, protRes] = await Promise.all([
+          api("/api/step", {
+            method: "POST",
+            body: JSON.stringify({
+              chapter_id: ch.id,
+              step_index: state.revealedSteps,
+              mode: "baseline",
+              approval: false,
+            }),
+          }),
+          api("/api/step", {
+            method: "POST",
+            body: JSON.stringify({
+              chapter_id: ch.id,
+              step_index: state.revealedSteps,
+              mode: "protected",
+              approval,
+            }),
+          }),
+        ]);
+
+        const run = getChapterRun(ch.id);
+        run.baseline[state.revealedSteps] = baseRes;
+        run.protected[state.revealedSteps] = protRes;
+        state.taints = protRes.taints;
+        state.revealedSteps += 1;
+
+        if (state.revealedSteps >= steps.length) {
+          state.completedChapters.add(ch.id);
+          if (state.autoPlay) stopAutoPlay();
+        }
+
+        // Trigger delegation animation if delegate step succeeded
+        if (nextStep.type === "delegate" && protRes.verdict === "ALLOW") {
+          animateDelegation(nextStep.from, nextStep.to, state.taints[nextStep.from] || []);
+        } else {
+          highlightActiveAgent(nextStep.agent || nextStep.from);
+        }
+
+        await refreshAuditAndVerify();
+        renderAll();
+      } finally {
+        state.busy = false;
+        updateControlState();
+      }
+    }
+
+    async function reRunHumanApproval(stepIdx) {
+      const ch = currentChapter();
+      const step = ch.steps[stepIdx];
+      openHumanModal(stepIdx, step, true);
+    }
+
+    async function submitHumanDecision(stepIdx, approved, isRerun = false) {
+      closeHumanModal();
+      if (!isRerun) {
+        await executeNextStep(approved);
+        return;
+      }
+      // Re-run only the human approval step with the new approval flag
+      const ch = currentChapter();
+      state.busy = true;
+      try {
+        const protRes = await api("/api/step", {
+          method: "POST",
+          body: JSON.stringify({
+            chapter_id: ch.id,
+            step_index: stepIdx,
+            mode: "protected",
+            approval: approved,
+          }),
+        });
+        const run = getChapterRun(ch.id);
+        run.protected[stepIdx] = protRes;
+        state.taints = protRes.taints;
+        await refreshAuditAndVerify();
+        renderAll();
+      } finally {
+        state.busy = false;
+        updateControlState();
+      }
+    }
+
+    async function goToChapter(idx) {
+      if (idx < 0 || idx >= state.story.chapters.length) return;
+      stopAutoPlay();
+      state.chapterIdx = idx;
+      const ch = currentChapter();
+      const run = getChapterRun(ch.id);
+      state.revealedSteps = run.protected.length;
+      state.isPausedOnCh4 = false;
+      await refreshTaints();
+      renderAll();
+    }
+
+    async function replayCurrentChapter() {
+      stopAutoPlay();
+      const ch = currentChapter();
+      state.runs[ch.id] = { baseline: [], protected: [] };
+      state.revealedSteps = 0;
+      state.isPausedOnCh4 = false;
+      const data = await api("/api/chapter/reset", {
+        method: "POST",
+        body: JSON.stringify({ chapter_id: ch.id }),
+      });
+      state.taints = data.taints;
+      renderAll();
+    }
+
+    async function stepBack() {
+      stopAutoPlay();
+      if (state.isPausedOnCh4) {
+        state.isPausedOnCh4 = false;
+        renderStage();
+        renderNarrator();
+        return;
+      }
+      if (state.revealedSteps > 0) {
+        await replayCurrentChapter();
+        return;
+      }
+      if (state.chapterIdx > 0) {
+        await goToChapter(state.chapterIdx - 1);
+      }
+    }
+
+    async function resetEverything() {
+      stopAutoPlay();
+      const res = await api("/api/reset", { method: "POST" });
+      state.runs = {};
+      state.completedChapters.clear();
+      state.chapterIdx = 0;
+      state.revealedSteps = 0;
+      state.isPausedOnCh4 = false;
+      state.liveBenchmark = null;
+      state.taints = res.taints;
+      await refreshAuditAndVerify();
+      renderAll();
+    }
+
+    // =========================================================================
+    // AGENT MAP ANIMATIONS
+    // =========================================================================
+    function highlightActiveAgent(agentId) {
+      document.querySelectorAll(".agent-node").forEach((el) => el.classList.remove("is-active"));
+      if (agentId) {
+        const target = document.getElementById(`node-${agentId}`);
+        if (target) target.classList.add("is-active");
+      }
+    }
+
+    function getNodeCenter(agentId) {
+      const el = document.getElementById(`node-${agentId}`);
+      if (!el) return NODE_CENTERS[agentId];
+      return {
+        x: el.offsetLeft + el.offsetWidth / 2,
+        y: el.offsetTop + el.offsetHeight / 2,
+      };
+    }
+
+    function syncMapSvgViewBox() {
+      const canvas = document.getElementById("mapCanvas");
+      const svg = canvas?.querySelector(".map-svg");
+      if (!canvas || !svg) return;
+      const w = canvas.clientWidth || 248;
+      const h = canvas.clientHeight || 342;
+      svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+      const orch = getNodeCenter("orch_01");
+      const res = getNodeCenter("res_01");
+      const cod = getNodeCenter("cod_01");
+      const com = getNodeCenter("com_01");
+      const lines = svg.querySelectorAll("line.edge-base");
+      if (lines.length >= 3) {
+        lines[0].setAttribute("x1", orch.x); lines[0].setAttribute("y1", orch.y);
+        lines[0].setAttribute("x2", res.x);  lines[0].setAttribute("y2", res.y);
+        lines[1].setAttribute("x1", orch.x); lines[1].setAttribute("y1", orch.y);
+        lines[1].setAttribute("x2", cod.x);  lines[1].setAttribute("y2", cod.y);
+        lines[2].setAttribute("x1", orch.x); lines[2].setAttribute("y1", orch.y);
+        lines[2].setAttribute("x2", com.x);  lines[2].setAttribute("y2", com.y);
+      }
+      const curve = svg.querySelector("path.edge-base");
+      if (curve) {
+        curve.setAttribute("d", `M ${res.x} ${res.y} Q ${res.x - 10} ${(res.y + com.y) / 2} ${com.x} ${com.y}`);
+      }
+    }
+
+    function animateDelegation(fromId, toId, labels) {
+      syncMapSvgViewBox();
+      const from = getNodeCenter(fromId);
+      const to = getNodeCenter(toId);
+      if (!from || !to) return;
+
+      highlightActiveAgent(toId);
+      const pathEl = document.getElementById("activeEdgePath");
+      const mx = (from.x + to.x) / 2 + (fromId === "res_01" && toId === "com_01" ? -24 : 0);
+      const my = (from.y + to.y) / 2;
+      pathEl.setAttribute("d", `M ${from.x} ${from.y} Q ${mx} ${my} ${to.x} ${to.y}`);
+      pathEl.style.display = "block";
+
+      // Animate flying taint chip along the connection
+      if (labels && labels.length > 0) {
+        const canvas = document.getElementById("mapCanvas");
+        const pill = document.createElement("div");
+        pill.className = "flying-taint";
+        pill.textContent = labels[0];
+        pill.style.left = `${from.x - 42}px`;
+        pill.style.top = `${from.y - 10}px`;
+        canvas.appendChild(pill);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            pill.style.left = `${to.x - 42}px`;
+            pill.style.top = `${to.y - 10}px`;
+          });
+        });
+        setTimeout(() => {
+          pill.style.opacity = "0";
+          setTimeout(() => pill.remove(), 240);
+        }, 680);
+      }
+
+      setTimeout(() => {
+        pathEl.style.display = "none";
+      }, 1500);
+    }
+
+    // =========================================================================
+    // RENDERING
+    // =========================================================================
+    function renderAll() {
+      renderTopNav();
+      renderAgentMap();
+      syncMapSvgViewBox();
+      renderStage();
+      renderAuditRail();
+      renderNarrator();
+      renderNotesDrawer();
+      updateControlState();
+    }
+
+    function renderTopNav() {
+      const container = document.getElementById("chapterDots");
+      container.innerHTML = state.story.chapters
+        .map((ch, idx) => {
+          const active = idx === state.chapterIdx ? "is-active" : "";
+          const done = state.completedChapters.has(ch.id) ? "is-done" : "";
+          return `<button class="ch-dot ${active} ${done}" data-ch-idx="${idx}" title="Chapter ${ch.number}: ${esc(ch.title)}">${ch.number}</button>`;
+        })
+        .join("");
+      container.querySelectorAll(".ch-dot").forEach((btn) => {
+        btn.addEventListener("click", () => goToChapter(Number(btn.dataset.chIdx)));
+      });
+    }
+
+    function renderAgentMap() {
+      const ch = currentChapter();
+      document.getElementById("sessionBadge").textContent = ch.session_id;
+
+      for (const agent of state.story.agents) {
+        const labels = state.taints[agent.id] || [];
+        const node = document.getElementById(`node-${agent.id}`);
+        const row = document.getElementById(`taints-${agent.id}`);
+        if (!node || !row) continue;
+
+        node.classList.toggle("is-tainted-ext", labels.includes("UNTRUSTED_EXTERNAL"));
+        node.classList.toggle("is-tainted-conf", labels.includes("CONFIDENTIAL_INTERNAL"));
+
+        if (labels.length === 0) {
+          row.innerHTML = `<span class="taint-clean">clean</span>`;
+        } else {
+          row.innerHTML = labels
+            .map((lbl) => {
+              const cls = lbl === "CONFIDENTIAL_INTERNAL" ? "conf" : "ext";
+              return `<span class="taint-chip ${cls}">${esc(lbl)}</span>`;
+            })
+            .join("");
+        }
+      }
+    }
+
+    function renderStage() {
+      const ch = currentChapter();
+      document.getElementById("stageEyebrow").textContent = ch.tag;
+      document.getElementById("stageTitle").textContent = ch.title;
+
+      const actionsEl = document.getElementById("stageHeaderActions");
+      actionsEl.innerHTML = "";
+      if (ch.id === "ch4") {
+        const pBtn = document.createElement("button");
+        pBtn.className = `btn-secondary ${state.pauseBeforeExfil ? "is-active" : ""}`;
+        pBtn.textContent = state.pauseBeforeExfil ? "Pause and explain: On" : "Pause and explain: Off";
+        pBtn.addEventListener("click", () => {
+          state.pauseBeforeExfil = !state.pauseBeforeExfil;
+          if (!state.pauseBeforeExfil && state.isPausedOnCh4) {
+            state.isPausedOnCh4 = false;
+          }
+          renderStage();
+        });
+        actionsEl.appendChild(pBtn);
+      }
+
+      const stage = document.getElementById("stageContent");
+      if (ch.layout === "intro") {
+        stage.innerHTML = renderIntroStage(ch);
+      } else if (ch.layout === "audit") {
+        stage.innerHTML = renderAuditStage();
+        bindAuditStageEvents();
+      } else if (ch.layout === "scoreboard") {
+        stage.innerHTML = renderScoreboardStage();
+        bindScoreboardEvents();
+      } else {
+        stage.innerHTML = renderComparisonStage(ch);
+        bindStageDynamicEvents();
+      }
+    }
+
+    function renderIntroStage(ch) {
+      const agentCards = state.story.agents
+        .map(
+          (a) => `
+          <div class="agent-card">
+            <div class="agent-card-top">
+              <span class="agent-card-name">${esc(a.name)}</span>
+              <span class="agent-card-pill">${esc(a.id)} · P${a.privilege_level}</span>
+            </div>
+            <div style="font-size:13px;color:var(--ink-muted);font-weight:500;">${esc(a.tag)}</div>
+            <div class="agent-card-summary">${esc(a.summary)}</div>
+          </div>`
+        )
+        .join("");
+
+      const matrixRows = state.story.privilege_matrix
+        .map(
+          (row) => `
+          <tr>
+            <td>${esc(row.role)}</td>
+            <td>${esc(row.allowed)}</td>
+            <td>${esc(row.conditional)}</td>
+            <td>${esc(row.denied)}</td>
+          </tr>`
+        )
+        .join("");
+
+      const pillars = ch.pillars
+        .map(
+          (p) => `
+          <div class="pillar-item">
+            <h4>${esc(p.title)}</h4>
+            <p>${esc(p.detail)}</p>
+          </div>`
+        )
+        .join("");
+
+      return `
+        <div class="agents-bento">${agentCards}</div>
+        <div class="gradient-spotlight-card">
+          <div class="spotlight-kicker">Deterministic Enforcement Architecture</div>
+          <h2 class="spotlight-title">Four specialist agents. Zero trust in the model.</h2>
+          <div class="pillars-grid">${pillars}</div>
+        </div>
+        <div class="matrix-card">
+          <div class="panel-eyebrow" style="margin-bottom:10px;">Table 3.4 · Policy Privilege Matrix (26 Declarative YAML Rules)</div>
+          <table class="matrix-table">
+            <thead>
+              <tr>
+                <th>Role</th>
+                <th>Allowed</th>
+                <th>Escalate / Conditional</th>
+                <th>Denied</th>
+              </tr>
+            </thead>
+            <tbody>${matrixRows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderComparisonStage(ch) {
+      const run = getChapterRun(ch.id);
+      const steps = ch.steps || [];
+      const count = state.revealedSteps;
+
+      let pauseHtml = "";
+      if (state.isPausedOnCh4) {
+        pauseHtml = `
+          <div class="pause-banner">
+            <div>
+              <strong style="color:var(--ink);">Paused before Step 3 (Exfiltration):</strong>
+              <span style="color:var(--ink-muted);">The Communicator is normally allowed to send e-mail. Ask the room: what would static RBAC alone do here?</span>
+            </div>
+            <button class="btn-primary" id="btnResumePaused" style="min-height:38px;padding:8px 16px;">Continue &gt;</button>
+          </div>`;
+      }
+
+      let baseCards = "";
+      let protCards = "";
+
+      for (let i = 0; i < count; i++) {
+        const step = steps[i];
+        const b = run.baseline[i];
+        const p = run.protected[i];
+        if (!b || !p) continue;
+
+        const callStr =
+          step.type === "delegate"
+            ? `<strong>${esc(step.from)}</strong> ⇢ <strong>${esc(step.to)}</strong> (<span class="mono">a2a.delegate</span>)`
+            : `<strong>${esc(step.agent)}</strong> → ${esc(step.tool)}(${esc(formatArgs(step.args))})`;
+
+        // Baseline card
+        const sideEffectBanner =
+          step.harmful && b.side_effect_occurred
+            ? `<div class="side-effect-banner">⚠ Side effect happened: ${esc(b.result)}</div>`
+            : "";
+
+        baseCards += `
+          <div class="step-card">
+            <div class="step-top">
+              <div class="step-caption">${i + 1}. ${esc(step.caption)}</div>
+              <span class="verdict-chip executed">EXECUTED</span>
+            </div>
+            <div class="step-call">${callStr}</div>
+            ${b.result ? `<div class="tool-output">${formatResultHtml(b.result, step.highlight_injection)}</div>` : ""}
+            ${sideEffectBanner}
+          </div>`;
+
+        // Protected card
+        const pVerdict = p.verdict || "DENY";
+        const chipCls = pVerdict === "ALLOW" ? "allow" : pVerdict === "ESCALATE" ? "escalate" : "deny";
+        const cardCls = pVerdict === "ALLOW" ? "is-allow" : pVerdict === "ESCALATE" ? "is-escalate" : "is-deny";
+
+        const ruleBadge = p.matched_rule_id
+          ? `<span class="rule-pill" data-rule-id="${esc(p.matched_rule_id)}">rule: ${esc(p.matched_rule_id)}</span>`
+          : "";
+
+        const splitVis =
+          pVerdict !== "ALLOW"
+            ? `
+            <div class="split-visibility">
+              <div class="vis-box">
+                <div class="vis-label">What the agent sees (sanitised)</div>
+                <div class="vis-text">${esc(p.agent_message)}</div>
+              </div>
+              <div class="vis-box operator">
+                <div class="vis-label">What the operator sees (internal + audit)</div>
+                <div class="vis-text">${esc(p.operator_detail)}</div>
+              </div>
+            </div>`
+            : "";
+
+        const rerunBtn =
+          step.type === "human_approval"
+            ? `<div style="display:flex;justify-content:flex-end;">
+                 <button class="btn-translucent btn-rerun-human" data-step-idx="${i}">Re-test human decision (${pVerdict === "ALLOW" ? "try Reject" : "try Approve"})</button>
+               </div>`
+            : "";
+
+        protCards += `
+          <div class="step-card ${cardCls}">
+            <div class="step-top">
+              <div class="step-caption">${i + 1}. ${esc(step.caption)}</div>
+              <span class="verdict-chip ${chipCls}">${esc(pVerdict)}</span>
+            </div>
+            <div class="step-call">${callStr}</div>
+            ${ruleBadge}
+            ${p.result ? `<div class="tool-output">${formatResultHtml(p.result, step.highlight_injection)}</div>` : ""}
+            ${splitVis}
+            ${rerunBtn}
+          </div>`;
+      }
+
+      if (count === 0) {
+        const emptyMsg = `<div style="color:var(--ink-muted);padding:24px 8px;font-size:16px;">Press <strong style="color:var(--ink);">Next &gt;</strong> (or <span class="mono">Space</span>) to execute Step 1 of ${steps.length}.</div>`;
+        baseCards = emptyMsg;
+        protCards = emptyMsg;
+      }
+
+      // End of chapter outcome banners & Ch 4 Hero Callout
+      let baseOutcome = "";
+      let protOutcome = "";
+      let heroCallout = "";
+
+      if (count >= steps.length && steps.length > 0 && ch.outcome_labels) {
+        const lastBase = run.baseline[steps.length - 1];
+        const lastProt = run.protected[steps.length - 1];
+        const isBenign = ch.goal && ch.goal.benign;
+
+        const baseCls = isBenign ? "completed" : lastBase?.side_effect_occurred ? "breach" : "completed";
+        const protCls = isBenign ? "completed" : lastProt?.side_effect_occurred ? "breach" : "contained";
+
+        baseOutcome = `
+          <div class="outcome-banner ${baseCls}">
+            <div>
+              <div class="outcome-tag">${esc(ch.outcome_labels.baseline)}</div>
+              <div class="outcome-detail">${esc(ch.outcome_labels.baseline_detail)}</div>
+            </div>
+          </div>`;
+
+        protOutcome = `
+          <div class="outcome-banner ${protCls}">
+            <div>
+              <div class="outcome-tag">${esc(ch.outcome_labels.protected)}</div>
+              <div class="outcome-detail">${esc(ch.outcome_labels.protected_detail)}</div>
+            </div>
+          </div>`;
+
+        if (ch.callout) {
+          heroCallout = `
+            <div class="gradient-spotlight-card" style="padding:22px 26px;">
+              <div class="spotlight-kicker">Why Taint Matters</div>
+              <h3 class="spotlight-title">${esc(ch.callout)}</h3>
+            </div>`;
+        }
+      }
+
+      const baseColCls = ch.emphasize_protected ? "stage-col is-subdued" : "stage-col";
+      const protColCls = ch.emphasize_protected ? "stage-col is-emphasized" : "stage-col";
+
+      return `
+        ${pauseHtml}
+        <div class="compare-grid">
+          <div class="${baseColCls}">
+            <div class="col-header">
+              <div>
+                <div class="col-title">Unprotected</div>
+                <div class="col-sub">Direct tool execution · No gateway</div>
+              </div>
+            </div>
+            ${baseCards}
+            ${baseOutcome}
+          </div>
+          <div class="${protColCls}">
+            <div class="col-header">
+              <div>
+                <div class="col-title">Protected (Gateway)</div>
+                <div class="col-sub">Deterministic PEP/PDP · Taint + Audit</div>
+              </div>
+            </div>
+            ${protCards}
+            ${protOutcome}
+          </div>
+        </div>
+        ${heroCallout}
+      `;
+    }
+
+    function renderAuditStage() {
+      const records = state.auditRecords;
+      const v = state.verifyStatus;
+      const statusCls = v.ok ? "intact" : "broken";
+      const statusMsg = v.ok
+        ? `Chain intact (${v.count} records)`
+        : `Tampering detected at line ${v.bad_line}`;
+
+      let rowsHtml = "";
+      if (records.length === 0) {
+        rowsHtml = `
+          <div class="step-card" style="align-items:center;text-align:center;padding:30px;">
+            <div style="font-size:18px;font-weight:500;">Audit log is currently empty</div>
+            <div style="color:var(--ink-muted);max-width:460px;">Run Chapters 2–7 or populate the standard demonstration chain so line 2 contains a verifiable DENY record.</div>
+            <button class="btn-primary" id="btnStageRestoreEmpty">Populate Sample Chain (Restore log)</button>
+          </div>`;
+      } else {
+        rowsHtml = `<div class="forensic-chain">` +
+          records
+            .map((r, idx) => {
+              const isBad = !v.ok && v.bad_line && r.line_number >= v.bad_line;
+              const isTamperLine = !v.ok && v.bad_line === r.line_number;
+              const vCls = r.verdict === "ALLOW" ? "allow" : "deny";
+              const linkHtml =
+                idx === 0
+                  ? ""
+                  : `<div class="forensic-link ${isBad ? "is-broken" : ""}">
+                       <span class="forensic-link-line"></span>
+                       <span>${isTamperLine ? "⚠ CHAIN BROKEN HERE — hash mismatch" : `links prev_hash ${esc((r.prev_hash || "").slice(0, 8))}…`}</span>
+                     </div>`;
+              return `
+                ${linkHtml}
+                <div class="forensic-row ${isTamperLine ? "is-tampered" : ""}">
+                  <div class="mono tabular" style="color:var(--ink-muted);">Line ${r.line_number}</div>
+                  <div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                      <strong class="mono">${esc(r.agent_id)}</strong>
+                      <span>→</span>
+                      <span class="mono">${esc(r.tool_name)}</span>
+                      <span class="rule-pill" data-rule-id="${esc(r.matched_rule_id)}">${esc(r.matched_rule_id)}</span>
+                    </div>
+                    <div class="mono tabular" style="font-size:12.5px;color:var(--ink-muted);margin-top:4px;">
+                      prev: ${esc((r.prev_hash || "").slice(0, 12))} · hash: ${esc((r.hash || "").slice(0, 12))}
+                    </div>
+                  </div>
+                  <span class="verdict-chip ${vCls}">${esc(r.verdict)}</span>
+                </div>`;
+            })
+            .join("") +
+          `</div>`;
+      }
+
+      return `
+        <div class="forensic-toolbar">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span class="verdict-chip ${v.ok ? "allow" : "deny"}" style="font-size:14px;padding:6px 14px;">
+              ${v.ok ? "✓" : "✕"} ${esc(statusMsg)}
+            </span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-secondary" id="btnStageVerify">Verify chain</button>
+            <button class="btn-secondary" id="btnStageTamper">Tamper with a row (Line 2)</button>
+            <button class="btn-primary" id="btnStageRestore" style="min-height:40px;">Restore log</button>
+          </div>
+        </div>
+        ${rowsHtml}
+      `;
+    }
+
+    function renderScoreboardStage() {
+      const m = state.story.metrics;
+
+      const kpisHtml = m.kpis
+        .map(
+          (k) => `
+          <div class="kpi-card">
+            <div class="kpi-value tabular ${esc(k.tone)}">${esc(k.value)}</div>
+            <div class="kpi-label">${esc(k.label)}</div>
+            <div class="kpi-sub">${esc(k.sub)}</div>
+          </div>`
+        )
+        .join("");
+
+      const barsHtml = m.categories
+        .map(
+          (c) => `
+          <div class="bar-row">
+            <div class="bar-head">
+              <span>${esc(c.label)} <span class="mono" style="color:var(--ink-muted);">(${c.scenarios})</span></span>
+              <span class="mono tabular"><span style="color:var(--semantic-danger);">${c.baseline_pct}%</span> → <span style="color:var(--semantic-success);">${c.protected_pct}%</span></span>
+            </div>
+            <div class="bar-track" title="Baseline ${c.baseline_pct}%">
+              <div class="bar-fill-base" style="width:${c.baseline_pct}%;"></div>
+            </div>
+            <div class="bar-track" title="Gateway ${c.protected_pct}%">
+              <div class="bar-fill-prot" style="width:${c.protected_pct}%;"></div>
+            </div>
+          </div>`
+        )
+        .join("");
+
+      const risksHtml = m.residual_risks
+        .map(
+          (r) => `
+          <div class="risk-row">
+            <span class="risk-id">${esc(r.id)}</span>
+            <strong>${esc(r.title)}</strong>
+            <div style="color:var(--ink-muted);font-size:14px;margin-top:3px;">${esc(r.why)}</div>
+          </div>`
+        )
+        .join("");
+
+      let benchHtml = `
+        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px;">
+          <div>
+            <div style="font-weight:500;">Live 10,000-Call PDP Benchmark</div>
+            <div style="font-size:14px;color:var(--ink-muted);margin-top:2px;">Run 10,000 real gateway evaluations right now in Python.</div>
+          </div>
+          <button class="btn-secondary" id="btnRunBench">Run 10,000 evaluations</button>
+        </div>`;
+
+      if (state.liveBenchmark) {
+        const b = state.liveBenchmark;
+        const maxCnt = Math.max(...b.bins.map((x) => x.count), 1);
+        const histBars = b.bins
+          .map(
+            (bin) => `
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div style="height:56px;width:100%;display:flex;align-items:flex-end;">
+                <div style="width:100%;height:${Math.max(4, Math.round((bin.count / maxCnt) * 56))}px;background:var(--primary);border-radius:4px 4px 0 0;"></div>
+              </div>
+              <span class="mono" style="font-size:10.5px;color:var(--ink-muted);">${esc(bin.label)}</span>
+            </div>`
+          )
+          .join("");
+
+        benchHtml = `
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div class="mono tabular" style="font-size:14px;">
+              Live 10k run: p50 <strong>${b.p50_us} µs</strong> · p95 <strong>${b.p95_us} µs</strong> · p99 <strong>${b.p99_us} µs</strong>
+            </div>
+            <button class="btn-secondary" id="btnRunBench" style="min-height:32px;padding:6px 12px;font-size:12.5px;">Re-run</button>
+          </div>
+          <div style="display:flex;gap:6px;align-items:flex-end;">${histBars}</div>`;
+      }
+
+      return `
+        <div class="kpi-grid">${kpisHtml}</div>
+        <div class="score-split">
+          <div class="score-card">
+            <h3>Attack Success: Baseline vs Gateway</h3>
+            ${barsHtml}
+            <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--hairline-soft);">
+              ${benchHtml}
+            </div>
+          </div>
+          <div class="score-card">
+            <h3>Be honest — Residual Risks &amp; Limits</h3>
+            ${risksHtml}
+          </div>
+        </div>
+        <div class="gradient-spotlight-card orange" style="padding:24px 30px;">
+          <div class="spotlight-kicker">Core Design Principle</div>
+          <h2 class="spotlight-title">${esc(m.closing_line)}</h2>
+        </div>
+      `;
+    }
+
+    function renderAuditRail() {
+      const feed = document.getElementById("auditFeed");
+      const badge = document.getElementById("auditCountBadge");
+      const bar = document.getElementById("auditStatusBar");
+      const statusText = document.getElementById("auditStatusText");
+
+      const records = state.auditRecords;
+      const v = state.verifyStatus;
+
+      badge.textContent = `${records.length} record${records.length === 1 ? "" : "s"}`;
+      bar.className = `audit-status ${v.ok ? "intact" : "broken"}`;
+      statusText.textContent = v.ok
+        ? `Chain intact, ${v.count} records`
+        : `Tampering detected at line ${v.bad_line}`;
+      feed.classList.toggle("is-broken", !v.ok);
+
+      if (records.length === 0) {
+        feed.innerHTML = `<div style="color:var(--ink-muted);font-size:13px;padding:10px 0;">No audit records yet.</div>`;
+        return;
+      }
+
+      // Newest on top, with exact line_number preserved
+      const newestFirst = [...records].reverse();
+      feed.innerHTML = newestFirst
+        .map((r) => {
+          const isTamper = !v.ok && v.bad_line === r.line_number;
+          const vCls = r.verdict === "ALLOW" ? "allow" : "deny";
+          const rowCls = r.verdict === "ALLOW" ? "is-allow" : "is-deny";
+          const shortTime = (r.timestamp || "").slice(11, 19);
+          return `
+            <div class="audit-row ${rowCls} ${isTamper ? "is-tampered" : ""}">
+              <div class="audit-row-top">
+                <span class="mono tabular" style="color:var(--ink-muted);font-size:11.5px;">#${r.line_number} · ${esc(shortTime)}</span>
+                <span class="verdict-chip ${vCls}" style="padding:2px 7px;font-size:10.5px;">${isTamper ? "⚠ " : ""}${esc(r.verdict)}</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+                <span class="mono" style="color:var(--ink);font-size:12px;">${esc(r.agent_id)} → ${esc(r.tool_name)}</span>
+              </div>
+              <span class="rule-pill" style="font-size:11px;padding:2px 7px;" data-rule-id="${esc(r.matched_rule_id)}">${esc(r.matched_rule_id)}</span>
+              <div class="audit-hashes">
+                <span>prev:${esc((r.prev_hash || "").slice(0, 8))}</span>
+                <span>hash:${esc((r.hash || "").slice(0, 8))}</span>
+              </div>
+            </div>`;
+        })
+        .join("");
+
+      bindRuleTooltips(feed);
+    }
+
+    function renderNarrator() {
+      const ch = currentChapter();
+      const totalCh = state.story.chapters.length;
+      const steps = ch.steps || [];
+
+      document.getElementById("narratorChapterLabel").textContent =
+        `Chapter ${ch.number} of ${totalCh} · ${ch.title}`;
+      document.getElementById("narratorLine").textContent = ch.narration;
+
+      const prog = document.getElementById("stepProgressLabel");
+      const btnNext = document.getElementById("btnNext");
+
+      if (steps.length === 0) {
+        prog.textContent = ch.layout === "intro" ? "Overview" : ch.layout === "audit" ? "Forensic view" : "Results";
+        btnNext.textContent = state.chapterIdx < totalCh - 1 ? "Next Chapter >" : "Done";
+      } else if (state.isPausedOnCh4) {
+        prog.textContent = `Paused (${state.revealedSteps} / ${steps.length})`;
+        btnNext.textContent = "Execute Step 3 >";
+      } else if (state.revealedSteps < steps.length) {
+        prog.textContent = `Step ${state.revealedSteps} / ${steps.length}`;
+        btnNext.textContent = "Next >";
+      } else {
+        prog.textContent = `Complete (${steps.length} / ${steps.length})`;
+        btnNext.textContent = state.chapterIdx < totalCh - 1 ? "Next Chapter >" : "Finish";
+      }
+    }
+
+    function renderNotesDrawer() {
+      const ch = currentChapter();
+      document.getElementById("notesTitle").textContent = `Ch ${ch.number}: ${ch.title}`;
+      document.getElementById("notesSay").textContent = ch.narration;
+      document.getElementById("notesCue").textContent = ch.presenter_notes;
+    }
+
+    function renderQaList() {
+      const list = document.getElementById("qaList");
+      list.innerHTML = (state.story.qa_backup || [])
+        .map(
+          (item) => `
+          <div class="vis-box">
+            <div class="vis-label" style="text-transform:none;color:var(--ink);font-size:13.5px;">${esc(item.q)}</div>
+            <div class="vis-text" style="font-size:13.5px;color:var(--ink-muted);">${esc(item.a)}</div>
+          </div>`
+        )
+        .join("");
+    }
+
+    function updateControlState() {
+      const ch = currentChapter();
+      const isLast = state.chapterIdx >= state.story.chapters.length - 1;
+      const stepsDone = state.revealedSteps >= (ch.steps || []).length;
+      document.getElementById("btnNext").disabled = state.busy || (isLast && stepsDone);
+      document.getElementById("btnBack").disabled = state.busy || (state.chapterIdx === 0 && state.revealedSteps === 0);
+      document.getElementById("btnReplay").disabled = state.busy || (ch.steps || []).length === 0;
+    }
+
+    // =========================================================================
+    // TOOLTIP & DYNAMIC EVENT BINDINGS
+    // =========================================================================
+    function bindRuleTooltips(root = document) {
+      const tip = document.getElementById("ruleTooltip");
+      const tipId = document.getElementById("ruleTooltipId");
+      const tipYaml = document.getElementById("ruleTooltipYaml");
+
+      root.querySelectorAll("[data-rule-id]").forEach((el) => {
+        el.addEventListener("mouseenter", (ev) => {
+          const rid = el.dataset.ruleId;
+          const rule = state.story.rules?.[rid];
+          tipId.textContent = rid;
+          tipYaml.textContent = rule ? rule.yaml : "No YAML definition loaded.";
+          tip.style.display = "block";
+          positionTooltip(ev);
+        });
+        el.addEventListener("mousemove", positionTooltip);
+        el.addEventListener("mouseleave", () => {
+          tip.style.display = "none";
+        });
+      });
+    }
+
+    function positionTooltip(ev) {
+      const tip = document.getElementById("ruleTooltip");
+      const pad = 14;
+      let x = ev.clientX + pad;
+      let y = ev.clientY + pad;
+      const rect = tip.getBoundingClientRect();
+      if (x + rect.width > window.innerWidth - 10) x = ev.clientX - rect.width - pad;
+      if (y + rect.height > window.innerHeight - 10) y = ev.clientY - rect.height - pad;
+      tip.style.left = `${x}px`;
+      tip.style.top = `${y}px`;
+    }
+
+    function bindStageDynamicEvents() {
+      bindRuleTooltips(document.getElementById("stageContent"));
+      const resumeBtn = document.getElementById("btnResumePaused");
+      if (resumeBtn) {
+        resumeBtn.addEventListener("click", () => executeNextStep(false));
+      }
+      document.querySelectorAll(".btn-rerun-human").forEach((btn) => {
+        btn.addEventListener("click", () => reRunHumanApproval(Number(btn.dataset.stepIdx)));
+      });
+    }
+
+    function bindAuditStageEvents() {
+      bindRuleTooltips(document.getElementById("stageContent"));
+      const vBtn = document.getElementById("btnStageVerify");
+      const tBtn = document.getElementById("btnStageTamper");
+      const rBtn = document.getElementById("btnStageRestore");
+      const eBtn = document.getElementById("btnStageRestoreEmpty");
+      if (vBtn) vBtn.addEventListener("click", handleVerify);
+      if (tBtn) tBtn.addEventListener("click", handleTamper);
+      if (rBtn) rBtn.addEventListener("click", handleRestore);
+      if (eBtn) eBtn.addEventListener("click", handleRestore);
+    }
+
+    function bindScoreboardEvents() {
+      const benchBtn = document.getElementById("btnRunBench");
+      if (benchBtn) {
+        benchBtn.addEventListener("click", async () => {
+          benchBtn.disabled = true;
+          benchBtn.textContent = "Benchmarking...";
+          state.liveBenchmark = await api("/api/benchmark", { method: "POST" });
+          renderStage();
+        });
+      }
+    }
+
+    // =========================================================================
+    // AUDIT HANDLERS
+    // =========================================================================
+    async function handleVerify() {
+      await refreshAuditAndVerify();
+      if (currentChapter().layout === "audit") renderStage();
+    }
+
+    async function handleTamper() {
+      try {
+        await api("/api/tamper", { method: "POST" });
+        await refreshAuditAndVerify();
+        if (currentChapter().layout === "audit") renderStage();
+      } catch (err) {
+        const bar = document.getElementById("auditStatusBar");
+        const statusText = document.getElementById("auditStatusText");
+        bar.className = "audit-status broken";
+        statusText.textContent = err.message;
+      }
+    }
+
+    async function handleRestore() {
+      const res = await api("/api/restore", { method: "POST" });
+      state.auditRecords = res.records || [];
+      state.verifyStatus = { ok: res.ok, bad_line: res.bad_line, count: res.count };
+      renderAuditRail();
+      if (currentChapter().layout === "audit") renderStage();
+    }
+
+    // =========================================================================
+    // MODALS, DRAWERS, AUTO-PLAY
+    // =========================================================================
+    let modalRerunMode = false;
+    function openHumanModal(stepIdx, step, isRerun = false) {
+      state.pendingApprovalStepIdx = stepIdx;
+      modalRerunMode = isRerun;
+      document.getElementById("humanModalCall").textContent =
+        `${step.agent} → ${step.tool}(${formatArgs(step.args)})`;
+      document.getElementById("humanModal").classList.add("is-open");
+    }
+
+    function closeHumanModal() {
+      document.getElementById("humanModal").classList.remove("is-open");
+    }
+
+    function toggleAutoPlay() {
+      if (state.autoPlay) {
+        stopAutoPlay();
+      } else {
+        state.autoPlay = true;
+        document.getElementById("btnAuto").classList.add("is-active");
+        document.getElementById("btnAuto").textContent = "Auto: On";
+        state.autoTimer = setInterval(() => {
+          if (!state.busy && !document.getElementById("humanModal").classList.contains("is-open")) {
+            executeNextStep();
+          }
+        }, 1500);
+      }
+    }
+
+    function stopAutoPlay() {
+      state.autoPlay = false;
+      if (state.autoTimer) {
+        clearInterval(state.autoTimer);
+        state.autoTimer = null;
+      }
+      const btn = document.getElementById("btnAuto");
+      btn.classList.remove("is-active");
+      btn.textContent = "Auto: Off";
+    }
+
+    function toggleNotes() {
+      const drawer = document.getElementById("notesDrawer");
+      const open = drawer.classList.toggle("is-open");
+      document.getElementById("btnNotes").classList.toggle("is-active", open);
+    }
+
+    function toggleTaintModal() {
+      const m = document.getElementById("taintModal");
+      const open = m.classList.toggle("is-open");
+      document.getElementById("btnTaintGuide").classList.toggle("is-active", open);
+    }
+
+    // =========================================================================
+    // WIRE UI CONTROLS & KEYBOARD SHORTCUTS
+    // =========================================================================
+    document.getElementById("btnNext").addEventListener("click", () => executeNextStep());
+    document.getElementById("btnBack").addEventListener("click", stepBack);
+    document.getElementById("btnReplay").addEventListener("click", replayCurrentChapter);
+    document.getElementById("btnReset").addEventListener("click", resetEverything);
+    document.getElementById("btnAuto").addEventListener("click", toggleAutoPlay);
+    document.getElementById("btnNotes").addEventListener("click", toggleNotes);
+    document.getElementById("btnCloseNotes").addEventListener("click", toggleNotes);
+    document.getElementById("btnTaintGuide").addEventListener("click", toggleTaintModal);
+    document.getElementById("btnCloseTaintModal").addEventListener("click", toggleTaintModal);
+
+    document.getElementById("btnVerifyChain").addEventListener("click", handleVerify);
+    document.getElementById("btnTamperRow").addEventListener("click", handleTamper);
+    document.getElementById("btnRestoreLog").addEventListener("click", handleRestore);
+    document.getElementById("btnExportAudit").addEventListener("click", () => {
+      window.location.href = "/api/audit/download";
+    });
+
+    document.getElementById("btnHumanReject").addEventListener("click", () => {
+      submitHumanDecision(state.pendingApprovalStepIdx, false, modalRerunMode);
+    });
+    document.getElementById("btnHumanApprove").addEventListener("click", () => {
+      submitHumanDecision(state.pendingApprovalStepIdx, true, modalRerunMode);
+    });
+
+    // Free Play bindings
+    const fpModal = document.getElementById("freePlayModal");
+    document.getElementById("btnFreePlay").addEventListener("click", () => fpModal.classList.add("is-open"));
+    document.getElementById("btnCloseFreePlay").addEventListener("click", () => fpModal.classList.remove("is-open"));
+    document.querySelectorAll(".fp-preset").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.getElementById("fpAgent").value = btn.dataset.agent;
+        document.getElementById("fpTool").value = btn.dataset.tool;
+        document.getElementById("fpArgs").value = btn.dataset.args;
+      });
+    });
+    document.getElementById("btnRunFreePlay").addEventListener("click", async () => {
+      const box = document.getElementById("fpResult");
+      let args = {};
+      try {
+        args = JSON.parse(document.getElementById("fpArgs").value || "{}");
+      } catch (e) {
+        box.style.display = "block";
+        box.innerHTML = `<div class="side-effect-banner">Invalid JSON in Arguments: ${esc(e.message)}</div>`;
+        return;
+      }
+      const res = await api("/api/freeplay", {
+        method: "POST",
+        body: JSON.stringify({
+          agent_id: document.getElementById("fpAgent").value,
+          tool_name: document.getElementById("fpTool").value,
+          arguments: args,
+          approval: document.getElementById("fpApproval").value === "true",
+        }),
+      });
+      box.style.display = "grid";
+      const p = res.protected;
+      const b = res.baseline;
+      const pCls = p.verdict === "ALLOW" ? "allow" : "deny";
+      box.innerHTML = `
+        <div class="stage-col">
+          <div class="col-header"><div class="col-title">Unprotected</div><span class="verdict-chip executed">EXECUTED</span></div>
+          <div class="tool-output">${esc(b.result)}</div>
+        </div>
+        <div class="stage-col is-emphasized">
+          <div class="col-header"><div class="col-title">Protected</div><span class="verdict-chip ${pCls}">${esc(p.verdict)}</span></div>
+          <span class="rule-pill">${esc(p.matched_rule_id)}</span>
+          ${p.result ? `<div class="tool-output">${esc(p.result)}</div>` : ""}
+          ${p.agent_message ? `<div class="vis-box"><div class="vis-label">Agent sees</div><div class="vis-text">${esc(p.agent_message)}</div></div>` : ""}
+          ${p.operator_detail ? `<div class="vis-box operator"><div class="vis-label">Operator sees</div><div class="vis-text">${esc(p.operator_detail)}</div></div>` : ""}
+        </div>`;
+      await refreshAuditAndVerify();
+    });
+
+    // Keyboard shortcuts: Space / -> = Next, <- = Back, R = Replay, P = Notes, T = Taint
+    document.addEventListener("keydown", (ev) => {
+      const tag = (ev.target?.tagName || "").toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select") return;
+
+      if (ev.key === "Escape") {
+        document.getElementById("taintModal").classList.remove("is-open");
+        document.getElementById("btnTaintGuide").classList.remove("is-active");
+        document.getElementById("freePlayModal").classList.remove("is-open");
+        document.getElementById("notesDrawer").classList.remove("is-open");
+        document.getElementById("btnNotes").classList.remove("is-active");
+        return;
+      }
+
+      if (document.getElementById("humanModal").classList.contains("is-open")) return;
+      if (document.getElementById("freePlayModal").classList.contains("is-open")) return;
+
+      if (ev.code === "Space" || ev.key === "ArrowRight") {
+        ev.preventDefault();
+        executeNextStep();
+      } else if (ev.key === "ArrowLeft") {
+        ev.preventDefault();
+        stepBack();
+      } else if (ev.key === "r" || ev.key === "R") {
+        ev.preventDefault();
+        replayCurrentChapter();
+      } else if (ev.key === "p" || ev.key === "P") {
+        ev.preventDefault();
+        toggleNotes();
+      } else if (ev.key === "t" || ev.key === "T") {
+        ev.preventDefault();
+        toggleTaintModal();
+      }
+    });
+
+    window.addEventListener("resize", syncMapSvgViewBox);
+    init();
+  </script>
+</body>
+</html>
